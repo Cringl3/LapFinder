@@ -8,7 +8,7 @@ import scala.io.Source
 object Functions {
   case class TelemetryPoint(x: Double, y: Double, t: Timestamp = Timestamp.from(Instant.EPOCH))
   case class TelemetrySegment(p1: TelemetryPoint, p2: TelemetryPoint)
-  case class Lap(startTime: Timestamp, lapTime: Long)
+  case class Lap(startTime:Timestamp, sectorTimes: List[Long])
 
   /**
    * Read a number of csv rows into a list of TelemetryPoints
@@ -37,28 +37,53 @@ object Functions {
   /**
    * Generate a list of laps from a list of telemetry points and a starting line
    * @param points telemetry points
-   * @param startLine the start line
-   * @return a list of laps
+   * @param sectorLines list of sector lines to use when calculating lap time
+   * @return a list of laps present in points
    */
-  def findLaps(points: List[TelemetryPoint], startLine: TelemetrySegment): List[Lap] = {
+  def findLaps(points: List[TelemetryPoint], sectorLines: List[TelemetrySegment]): List[Lap] = {
+    def calculateSectorTimes(crossings: List[TelemetryPoint]): List[Long] = {
+      (0 until  crossings.size - 1).map( i => {
+        val time1 = crossings(i).t
+        val time2 = crossings(i + 1).t
+
+        (time2.toInstant.toEpochMilli - time1.toInstant.toEpochMilli) / 1000
+      }).toList
+    }
+
     val lineSegments = (0 until points.length - 1).map(i =>
       TelemetrySegment(points(i), points(i+1))
     )
 
-    val crossings = lineSegments.flatMap(lineSegment => findStartLineIntersect(lineSegment, startLine))
+    val crossings = lineSegments.flatMap(lineSegment => findSectorLineIntersect(lineSegment, sectorLines))
 
-    (0 until crossings.length - 1).map(i =>
-      Lap(crossings(i).t, (crossings(i + 1).t.toInstant.toEpochMilli - (crossings(i).t.toInstant.toEpochMilli))/1000)
-    ).toList
+    val laps = for {sectorGrouping <- crossings.sliding(sectorLines.size + 1, sectorLines.size)}
+      yield Lap(sectorGrouping(0).t,calculateSectorTimes(sectorGrouping.toList))
+
+    laps.toList
   }
 
   /**
-   * Determine if and where a given telemtry segment crossed the finish line
+   * Determine if and where a given telemetry segment crossed one of the given sector lines
    * @param segment telemetry segment to test
-   * @param startLine the start line to check
-   * @return a telemetry point for the place and time the segment crossed the start line or none if it did not cross
+   * @param sectorLines the sector lines to check
+   * @return a telemetry point for the place and time the segment crossed one of the sector lines or none if it did not
    */
-  def findStartLineIntersect(segment: TelemetrySegment, startLine: TelemetrySegment): Option[TelemetryPoint] = {
+  def findSectorLineIntersect(segment: TelemetrySegment, sectorLines: List[TelemetrySegment]): Option[TelemetryPoint] = {
+    for (line <- sectorLines;
+         intersect = findSectorLineIntersect(segment, line)) {
+      if (intersect.isDefined) return intersect
+    }
+
+    None
+  }
+
+  /**
+   * Determine if and where a given telemetry segment crossed the given sector line
+   * @param segment telemetry segment to test
+   * @param sectorLine the sector line to check
+   * @return a telemetry point for the place and time the segment crossed the given sector line or none if it did not
+   */
+  def findSectorLineIntersect(segment: TelemetrySegment, sectorLine: TelemetrySegment): Option[TelemetryPoint] = {
     def linesIntersect(line1: TelemetrySegment, line2: TelemetrySegment): Boolean = {
       val l1 = new Line2D.Double(line1.p1.x, line1.p1.y, line1.p2.x, line1.p2.y)
       val l2 = new Line2D.Double(line2.p1.x, line2.p1.y, line2.p2.x, line2.p2.y)
@@ -81,11 +106,11 @@ object Functions {
     }
 
 
-    if (!linesIntersect(segment, startLine))
+    if (!linesIntersect(segment, sectorLine))
       None
     else {
       val slope1 = (segment.p2.y - segment.p1.y) / (segment.p2.x - segment.p1.x)
-      val slope2 = (startLine.p2.y - startLine.p1.y) / (startLine.p2.x - startLine.p1.x)
+      val slope2 = (sectorLine.p2.y - sectorLine.p1.y) / (sectorLine.p2.x - sectorLine.p1.x)
 
       val gatedSlope1 = if (slope1.isInfinity) Double.MaxValue else slope1
       val gatedSlope2 = if (slope2.isInfinity) Double.MaxValue else slope2
@@ -94,7 +119,7 @@ object Functions {
       //y - mx = b
       // b = y - mx
       val b1 = segment.p1.y - gatedSlope1 * segment.p1.x
-      val b2 = startLine.p1.y - gatedSlope2 * startLine.p1.x
+      val b2 = sectorLine.p1.y - gatedSlope2 * sectorLine.p1.x
 
       if (~=(gatedSlope1, gatedSlope2, 0.0001))
         None
