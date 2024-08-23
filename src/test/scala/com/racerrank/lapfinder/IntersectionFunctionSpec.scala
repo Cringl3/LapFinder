@@ -1,14 +1,14 @@
 package com.racerrank.lapfinder
 
-import com.racerrank.lapfinder.Functions.{TelemetryPoint, TelemetrySegment, findSectorLineIntersect, ~=}
+import com.racerrank.lapfinder.Functions.{Point, LineSegment, findSectorLineIntersect, ~=}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
 class IntersectionFunctionSpec extends AnyFlatSpec with should.Matchers{
 
   "An intersection function" should "detect when two lines intersect" in {
-    val line1 = TelemetrySegment(TelemetryPoint(-1,0), TelemetryPoint(1,0))
-    val line2 = TelemetrySegment(TelemetryPoint(0,1), TelemetryPoint(0,-1))
+    val line1 = LineSegment(Point(-1,0), Point(1,0))
+    val line2 = LineSegment(Point(0,1), Point(0,-1))
 
     val intersectPoint = findSectorLineIntersect(line1, line2)
 
@@ -18,8 +18,8 @@ class IntersectionFunctionSpec extends AnyFlatSpec with should.Matchers{
   }
 
   "An intersection function" should "not detect when two lines intersect outside of the current segment" in {
-    val line1 = TelemetrySegment(TelemetryPoint(-1,0), TelemetryPoint(1,0))
-    val line2 = TelemetrySegment(TelemetryPoint(0,5), TelemetryPoint(0,2))
+    val line1 = LineSegment(Point(-1,0), Point(1,0))
+    val line2 = LineSegment(Point(0,5), Point(0,2))
 
     val intersectPoint = findSectorLineIntersect(line1, line2)
 

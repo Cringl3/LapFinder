@@ -6,8 +6,8 @@ import java.time.{Duration, Instant, OffsetDateTime}
 import scala.io.Source
 
 object Functions {
-  case class TelemetryPoint(x: Double, y: Double, t: Timestamp = Timestamp.from(Instant.EPOCH))
-  case class TelemetrySegment(p1: TelemetryPoint, p2: TelemetryPoint)
+  case class Point(x: Double, y: Double, t: Timestamp = Timestamp.from(Instant.EPOCH))
+  case class LineSegment(p1: Point, p2: Point)
   case class Lap(startTime:Timestamp, sectorTimes: List[Long])
 
   /**
@@ -15,11 +15,11 @@ object Functions {
    * @param source source wrapping a csv list of telemetry strings
    * @return list of telemetry points read from source
    */
-  def readPointsFromSource(source: Source): List[TelemetryPoint] = {
+  def readPointsFromSource(source: Source): List[Point] = {
     val telemetryPoints = try source.mkString.split("\n") finally source.close()
     telemetryPoints.tail.map(s => {
       val tokens = s.split(",")
-      TelemetryPoint(tokens(0).toDouble, tokens(1).toDouble, Timestamp.from(OffsetDateTime.parse(tokens(2)).toInstant))
+      Point(tokens(0).toDouble, tokens(1).toDouble, Timestamp.from(OffsetDateTime.parse(tokens(2)).toInstant))
     }).toList
   }
 
@@ -40,12 +40,12 @@ object Functions {
    * @param sectorLines list of sector lines to use when calculating lap time
    * @return a list of laps present in points
    */
-  def findLaps(points: List[TelemetryPoint], sectorLines: List[TelemetrySegment]): List[Lap] = {
-    def calculateSectorTimes(sectorCrossingPoints: List[TelemetryPoint]): List[Long] = {
+  def findLaps(points: List[Point], sectorLines: List[LineSegment]): List[Lap] = {
+    def calculateSectorTimes(sectorCrossingPoints: List[Point]): List[Long] = {
       sectorCrossingPoints.sliding(2,1).map(i => (i(1).t.toInstant.toEpochMilli - i(0).t.toInstant.toEpochMilli) / 1000).toList
     }
 
-    val sectorCrossingPoints = points.sliding(2,1).map(i => TelemetrySegment(i(0), i(1)))
+    val sectorCrossingPoints = points.sliding(2,1).map(i => LineSegment(i(0), i(1)))
       .flatMap(lineSegment => findSectorLineIntersect(lineSegment, sectorLines))
 
     val laps = for {sectorGrouping <- sectorCrossingPoints.sliding(sectorLines.size + 1, sectorLines.size)}
@@ -60,7 +60,7 @@ object Functions {
    * @param sectorLines the sector lines to check
    * @return a telemetry point for the place and time the segment crossed one of the sector lines or none if it did not
    */
-  def findSectorLineIntersect(segment: TelemetrySegment, sectorLines: List[TelemetrySegment]): Option[TelemetryPoint] = {
+  def findSectorLineIntersect(segment: LineSegment, sectorLines: List[LineSegment]): Option[Point] = {
     for (line <- sectorLines;
          intersect = findSectorLineIntersect(segment, line)) {
       if (intersect.isDefined) return intersect
@@ -75,8 +75,8 @@ object Functions {
    * @param sectorLine the sector line to check
    * @return a telemetry point for the place and time the segment crossed the given sector line or none if it did not
    */
-  def findSectorLineIntersect(segment: TelemetrySegment, sectorLine: TelemetrySegment): Option[TelemetryPoint] = {
-    def linesIntersect(line1: TelemetrySegment, line2: TelemetrySegment): Boolean = {
+  def findSectorLineIntersect(segment: LineSegment, sectorLine: LineSegment): Option[Point] = {
+    def linesIntersect(line1: LineSegment, line2: LineSegment): Boolean = {
       val l1 = new Line2D.Double(line1.p1.x, line1.p1.y, line1.p2.x, line1.p2.y)
       val l2 = new Line2D.Double(line2.p1.x, line2.p1.y, line2.p2.x, line2.p2.y)
 
@@ -124,7 +124,7 @@ object Functions {
         val millisBetweenLastPointAndIntersect =
           Duration.between(segment.p1.t.toInstant, segment.p2.t.toInstant).toMillis * multiplier
 
-        Some(TelemetryPoint(
+        Some(Point(
           xIntercept,
           yIntercept,
           Timestamp.from(segment.p1.t.toInstant.plusMillis(millisBetweenLastPointAndIntersect.toLong)))
