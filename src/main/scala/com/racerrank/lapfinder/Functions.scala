@@ -30,7 +30,7 @@ object Functions {
    * @param precision the precision to compare the two doubles
    * @return true if abs(x - y) < precision
    */
-  def ~=(x: Double, y: Double, precision: Double) = {
+  def ~=(x: Double, y: Double, precision: Double): Boolean = {
     if ((x - y).abs < precision) true else false
   }
 
