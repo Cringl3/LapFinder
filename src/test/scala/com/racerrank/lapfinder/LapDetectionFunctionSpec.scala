@@ -33,4 +33,15 @@ class LapDetectionFunctionSpec extends AnyFlatSpec with should.Matchers{
     laps(3).startTime.toInstant should be (OffsetDateTime.parse("2024-04-05T05:34:12.49Z").toInstant)
     laps(3).sectorTimes(0) should be (35L)
   }
+
+
+  "A lap detection function" should "not crash when given partial input" in {
+    val structuredTelemetryPoints = readPointsFromSource(Source.fromResource("Reference_Lap.csv"))
+    val startLine = LineSegment(Point(-97.65781, 31.04673), Point(-97.65682, 31.04648))
+    val sectorLine = LineSegment(Point(-97.65468, 31.05224), Point(-97.65604, 31.05259))
+
+    val laps = findLaps(structuredTelemetryPoints.take(1), List(startLine, sectorLine))
+
+    laps.size should be (0)
+  }
 }
