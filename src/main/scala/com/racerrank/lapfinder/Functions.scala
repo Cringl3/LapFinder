@@ -8,8 +8,8 @@ import scala.io.Source
 object Functions {
   case class Point(x: Double, y: Double, t: Timestamp = Timestamp.from(Instant.EPOCH))
   case class LineSegment(p1: Point, p2: Point)
-  case class Lap(startTime:Timestamp, sectorTimes: List[Long])
-
+  case class Lap(startTime: Timestamp, sectors: List[Sector])
+  case class Sector(startTime: Timestamp, sectorTime:Long)
   /**
    * Read a number of csv rows into a list of TelemetryPoints
    * @param source source wrapping a csv list of telemetry strings
@@ -44,8 +44,10 @@ object Functions {
     if(points.size == 1)
       List[Lap]()
     else {
-      def calculateSectorTimes(sectorCrossingPoints: List[Point]): List[Long] = {
-        sectorCrossingPoints.sliding(2, 1).map(i => (i(1).t.toInstant.toEpochMilli - i(0).t.toInstant.toEpochMilli) / 1000).toList
+      def calculateSectorTimes(sectorCrossingPoints: List[Point]): List[Sector] = {
+        sectorCrossingPoints.sliding(2, 1).map(i =>
+          Sector(i(0).t, (i(1).t.toInstant.toEpochMilli - i(0).t.toInstant.toEpochMilli) / 1000)
+          ).toList
       }
 
       val sectorCrossingPoints = points.sliding(2, 1).map(i => LineSegment(i(0), i(1)))
