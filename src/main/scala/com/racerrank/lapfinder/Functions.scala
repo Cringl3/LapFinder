@@ -17,10 +17,13 @@ object Functions {
    */
   def readPointsFromSource(source: Source): List[Point] = {
     val telemetryPoints = try source.mkString.split("\n") finally source.close()
-    telemetryPoints.tail.map(s => {
-      val tokens = s.split(",")
-      Point(tokens(0).toDouble, tokens(1).toDouble, Timestamp.from(OffsetDateTime.parse(tokens(2)).toInstant))
-    }).toList
+
+    val pointsFromFile = for {
+      s <- telemetryPoints.tail
+      tokens = s.split(",")
+    } yield Point(tokens(0).toDouble, tokens(1).toDouble, Timestamp.from(OffsetDateTime.parse(tokens(2)).toInstant))
+
+    pointsFromFile.toList
   }
 
   /**
@@ -80,12 +83,11 @@ object Functions {
    */
   def findSectorLineIntersect(segment: LineSegment, sectorLines: List[LineSegment]): Option[Point] = {
     val intersections = for {
-      line <- sectorLines;
-      intersect = findSectorLineIntersect(segment, line);
-      if(intersect.isDefined)
+      line <- sectorLines
+      intersect <- findSectorLineIntersect(segment, line)
     } yield intersect
 
-    if(intersections.isEmpty) None else intersections.head
+    intersections.headOption
   }
 
   /**
