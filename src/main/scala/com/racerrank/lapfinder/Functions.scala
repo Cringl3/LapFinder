@@ -41,13 +41,20 @@ object Functions {
    * @return a list of laps present in points
    */
   def findLaps(points: List[Point], sectorLines: List[LineSegment]): List[Lap] = {
-    if(points.size == 1)
+    if(points.size <= 1)
       List[Lap]()
     else {
       def calculateSectorTimes(sectorCrossingPoints: List[Point]): List[Sector] = {
-        sectorCrossingPoints.sliding(2, 1).map(i =>
-          Sector(i(0).t, (i(1).t.toInstant.toEpochMilli - i(0).t.toInstant.toEpochMilli) / 1000)
-          ).toList
+        val sectors = for {
+          sectorStartAndEndPoints <- sectorCrossingPoints.sliding(2,1)
+          sectorStartPoint = sectorStartAndEndPoints(0)
+          sectorEndPoint = sectorStartAndEndPoints(1)
+        } yield Sector(
+          sectorStartPoint.t,
+          (sectorEndPoint.t.toInstant.toEpochMilli - sectorStartPoint.t.toInstant.toEpochMilli) / 1000
+        )
+
+        sectors.toList
       }
 
       val sectorCrossingPoints = for {
@@ -59,8 +66,7 @@ object Functions {
       val laps = for {
         sectorGrouping <- sectorCrossingPoints.sliding(sectorLines.size + 1, sectorLines.size)
         if sectorGrouping.size > 1
-      }
-      yield Lap(sectorGrouping.head.t, calculateSectorTimes(sectorGrouping.toList))
+      } yield Lap(sectorGrouping.head.t, calculateSectorTimes(sectorGrouping.toList))
 
       laps.toList
     }
