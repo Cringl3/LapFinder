@@ -68,12 +68,13 @@ object Functions {
    * @return a telemetry point for the place and time the segment crossed one of the sector lines or none if it did not
    */
   def findSectorLineIntersect(segment: LineSegment, sectorLines: List[LineSegment]): Option[Point] = {
-    for (line <- sectorLines;
-         intersect = findSectorLineIntersect(segment, line)) {
-      if (intersect.isDefined) return intersect
-    }
+    val intersections = for {
+      line <- sectorLines;
+      intersect = findSectorLineIntersect(segment, line);
+      if(intersect.isDefined)
+    } yield intersect
 
-    None
+    if(intersections.isEmpty) None else intersections.head
   }
 
   /**
