@@ -50,11 +50,16 @@ object Functions {
           ).toList
       }
 
-      val sectorCrossingPoints = points.sliding(2, 1).map(i => LineSegment(i(0), i(1)))
-        .flatMap(lineSegment => findSectorLineIntersect(lineSegment, sectorLines))
+      val sectorCrossingPoints = for {
+        pointPairs <- points.sliding(2,1)
+        lines = LineSegment(pointPairs(0), pointPairs(1))
+        intersects <- findSectorLineIntersect(lines, sectorLines)
+      } yield intersects
 
-      val laps = for {sectorGrouping <- sectorCrossingPoints.sliding(sectorLines.size + 1, sectorLines.size)
-                      if sectorGrouping.size > 1}
+      val laps = for {
+        sectorGrouping <- sectorCrossingPoints.sliding(sectorLines.size + 1, sectorLines.size)
+        if sectorGrouping.size > 1
+      }
       yield Lap(sectorGrouping.head.t, calculateSectorTimes(sectorGrouping.toList))
 
       laps.toList
