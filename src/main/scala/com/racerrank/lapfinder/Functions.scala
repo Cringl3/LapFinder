@@ -61,10 +61,10 @@ object Functions {
       }
 
       val sectorCrossingPoints = for {
-        pointPairs <- points.sliding(2,1)
-        lines = LineSegment(pointPairs(0), pointPairs(1))
-        intersects <- findSectorLineIntersect(lines, sectorLines)
-      } yield intersects
+        pointPair <- points.sliding(2,1)
+        line = LineSegment(pointPair(0), pointPair(1))
+        intersect <- findSectorLineIntersect(line, sectorLines)
+      } yield intersect
 
       val laps = for {
         sectorGrouping <- sectorCrossingPoints.sliding(sectorLines.size + 1, sectorLines.size)
