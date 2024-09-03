@@ -34,7 +34,7 @@ object Functions {
    * @return true if abs(x - y) < precision
    */
   def ~=(x: Double, y: Double, precision: Double): Boolean = {
-    if ((x - y).abs < precision) true else false
+    (x - y).abs < precision
   }
 
   /**
