@@ -69,7 +69,8 @@ object Functions {
       val laps = for {
         sectorGrouping <- sectorCrossingPoints.sliding(sectorLines.size + 1, sectorLines.size)
         if sectorGrouping.size > 1
-      } yield Lap(sectorGrouping.head.t, calculateSectorTimes(sectorGrouping.toList))
+        lap = Lap(sectorGrouping.head.t, calculateSectorTimes(sectorGrouping.toList))
+      } yield lap
 
       laps.toList
     }
